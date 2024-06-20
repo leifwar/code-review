@@ -129,7 +129,50 @@ OUTDATED."
             (define-key map (kbd "b") 'code-review-commit-buffer-back)
             map))
 
+;;;###autoload
+(defun code-review-merge-merge ()
+  "Merge PR with MERGE strategy."
+  (interactive)
+  (let ((pr (code-review-db-get-pullreq)))
+    (code-review-merge pr "merge")
+    (oset pr state "MERGED")
+    (code-review-db-update pr)
+    (code-review--build-buffer))
+      )
+
+;;;###autoload
+(defun code-review-select-merge ()
+  "Select transient for merge request."
+  (interactive)
+  (let ((pr (code-review-db-get-pullreq)))
+    (if (code-review-github-repo-p pr)
+	(code-review-github-merge-request)
+      (code-review-gitlab-merge-request))
+    )
+  )
+
 ;;; Transient
+(transient-define-prefix code-review-gitlab-merge-request ()
+  "Merge Request."
+  ["Arguments"
+   ("s" "Squash" "--squash")
+   ("c s" "Squash commit message" "--squash-commit-message=")
+   ("c m" "Merge commit message" "--merge-commit-message=")
+   ("h" "sha" "--sha")
+   ("S" "Merge when pipeline succeeds" "--when-pipeline-succeeds")
+   ("R" "Remove source branch" "--remove-source-branch")
+   ]
+  ["Actions"
+   ("m" "Merge" code-review-merge-merge)]
+  )
+
+(transient-define-prefix code-review-github-merge-request ()
+  "Merge Request."
+  [["Merge"
+    ("m m" "Merge" code-review-merge-merge)
+    ("m r" "Merge Rebase" code-review-merge-rebase)
+    ("m s" "Merge Squash" code-review-merge-squash)
+   ]])
 
 (transient-define-prefix code-review-transient-api ()
   "Code Review."
@@ -140,9 +183,7 @@ OUTDATED."
     ("C-c C-s" "Save Unfinished Review" code-review-save-unfinished-review)
     ("C-c C-r" "Open Unfinished Review" code-review-open-unfinished-review)]
    ["Merge"
-    ("m m" "Merge" code-review-merge-merge)
-    ("m r" "Merge Rebase" code-review-merge-rebase)
-    ("m s" "Merge Squash" code-review-merge-squash)]]
+    ("m" "Merge" code-review-select-merge)]]
   ["Fast track"
    ("l" "LGTM - Approved" code-review-submit-lgtm)
    ("p" "Submit Replies" code-review-submit-only-replies)

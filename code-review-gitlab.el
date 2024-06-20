@@ -616,9 +616,25 @@ Optionally sets FALLBACK? to get minimal query."
   "Set description for your pr in GITLAB and call CALLBACK."
   (code-review-gitlab-not-supported-message))
 
-(cl-defmethod code-review-merge ((_gitlab code-review-gitlab-repo) _strategy)
-  "Merge a pr in GITLAB using STRATEGY."
-  (code-review-gitlab-not-supported-message))
+(cl-defmethod code-review-merge ((gitlab code-review-gitlab-repo) strategy)
+  "Merge a PR in GITLAB using a STRATEGY."
+  (glab-put (format "/v4/projects/%s/merge_requests/%s/merge"
+                    (code-review-gitlab--project-id gitlab)
+                    (oref gitlab number)
+		    )
+            nil
+            :auth code-review-auth-login-marker
+            :host code-review-gitlab-host
+            :payload (a-alist
+		      'merge_when_pipeline_succeeds
+		      (transient-arg-value "--when-pipeline-succeeds" (transient-args 'code-review-gitlab-merge-request))
+		      'should_remove_source_branch
+		      (transient-arg-value "--remove-source-branch" (transient-args 'code-review-gitlab-merge-request))
+                      )
+            :callback (lambda (&rest _)
+                        (message "Merge %s PR #%s succeeded." strategy (oref gitlab number)))
+            :errorback #'code-review-gitlab-errback))
+
 
 (cl-defmethod code-review-send-reaction ((_gitlab code-review-gitlab-repo))
   "Set reaction for your pr in GITLAB."

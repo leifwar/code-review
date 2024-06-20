@@ -330,13 +330,11 @@ Optionally set a FEEDBACK message."
   "Merge PR with MERGE strategy."
   (interactive)
   (let ((pr (code-review-db-get-pullreq)))
-    (if (code-review-github-repo-p pr)
-        (progn
-          (code-review-merge pr "merge")
-          (oset pr state "MERGED")
-          (code-review-db-update pr)
-          (code-review--build-buffer))
-      (code-review-gitlab-not-supported-message))))
+    (code-review-merge pr "merge")
+    (oset pr state "MERGED")
+    (code-review-db-update pr)
+    (code-review--build-buffer))
+      )
 
 ;;;###autoload
 (defun code-review-merge-rebase ()
