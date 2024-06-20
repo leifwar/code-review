@@ -571,13 +571,35 @@ Optionally sets FALLBACK? to get minimal query."
              :errorback #'code-review-gitlab-errback
              :callback (lambda (&rest _) (funcall callback))))
 
-(cl-defmethod code-review-get-milestones ((_gitlab code-review-gitlab-repo))
+(cl-defmethod code-review-get-milestones ((gitlab code-review-gitlab-repo))
   "Get milestones for your pr at GITLAB."
-  (code-review-gitlab-not-supported-message))
+  (let ((resp (glab-get (format "/v4/projects/%s/milestones"
+				(code-review-gitlab--project-id gitlab))
+			nil
+			:auth code-review-auth-login-marker
+			:host code-review-gitlab-host
+			:noerror 'return
+			)))
+    (if (a-get resp 'error)
+        (error (prin1-to-string resp))
+      (-map
+       (lambda (l)
+         `(,(a-get l 'title) . ,(a-get l 'id)))
+       resp))))
 
-(cl-defmethod code-review-send-milestone ((_gitlab code-review-gitlab-repo) _callback)
+(cl-defmethod code-review-send-milestone ((gitlab code-review-gitlab-repo) callback)
   "Set milestone for your pr in GITLAB and call CALLBACK."
-  (code-review-gitlab-not-supported-message))
+  (message "Sending new milestone...")
+  (glab-post (format "/v4/projects/%s/merge_requests/%s"
+		     (code-review-gitlab--project-id gitlab)
+		     (oref gitlab number))
+             nil
+             :auth code-review-auth-login-marker
+             :host code-review-gitlab-host
+             :payload (a-alist 'milestone_id (a-get (oref gitlab milestones) 'number))
+             :errorback #'code-review-gitlab-errback
+             :callback (lambda (&rest _) (funcall callback))))
+
 
 (cl-defmethod code-review-send-title ((gitlab code-review-gitlab-repo) callback)
   "Set title for your pr in GITLAB and call CALLBACK."
